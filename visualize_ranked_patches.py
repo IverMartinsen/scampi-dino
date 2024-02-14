@@ -20,8 +20,6 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
-import torchvision
 from torchvision import transforms as pth_transforms
 import numpy as np
 from PIL import Image
@@ -48,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument("--image_path", default=None, type=str, help="Path of the image to load.")
     parser.add_argument("--image_size", default=(224, 224), type=int, nargs="+", help="Resize image.")
     parser.add_argument('--output_dir', default='./ranked_patches/', help='Path where to save visualizations.')
+    parser.add_argument('--distance', default='inner', type=str, choices=['inner', 'l2'], help='Distance to use for affinity matrix.')
     args = parser.parse_args()
 
     
@@ -120,10 +119,16 @@ if __name__ == '__main__':
     cls_token = embeddings[0, 0, :]  # CLS token embedding
     patch_tokens = embeddings[0, 1:, :]  # patch tokens, shape (num_patches, projection_dim)
     # affinitiy matrix
-    A = torch.matmul(patch_tokens, patch_tokens.transpose(0, 1)) # shape (num_patches, num_patches)
-    # normalize
-    A = A * (A > 0)
-    A = A / torch.sum(A, dim=(0))
+    if args.distance == "inner":
+        A = torch.matmul(patch_tokens, patch_tokens.transpose(0, 1)) # shape (num_patches, num_patches)
+        # normalize
+        A = A - torch.min(A)
+        A = A.numpy()
+    elif args.distance == "l2":
+        A = torch.cdist(patch_tokens, patch_tokens, p=2).numpy()
+        A = np.max(A) - A
+    
+    A = A / np.sum(A, axis=(0))
     A = A.T
     
     for i in range(10):
