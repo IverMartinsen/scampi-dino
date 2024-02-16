@@ -1,3 +1,4 @@
+import glob
 import h5py
 import tensorflow as tf
 import torch
@@ -6,7 +7,7 @@ from torch.utils.data import Dataset, IterableDataset
 
 
 class TFRecordMapDataset(Dataset):
-    def __init__(self, tfrecord_files, feature_description, transform=None):
+    def __init__(self, tfrecord_files, feature_description={"image": tf.io.FixedLenFeature([], tf.string)}, transform=None, length=None):
         """
         Args:
         - tfrecord_files (list of str): List of paths to TFRecord files.
@@ -31,17 +32,24 @@ class TFRecordMapDataset(Dataset):
         """
         self.tfrecord_files = tfrecord_files
         self.feature_description = feature_description
-        self.dataset = tf.data.TFRecordDataset(self.tfrecord_files)
+        self.dataset = tf.data.TFRecordDataset(glob.glob(self.tfrecord_files + "*.tfrecords"))
         self.transform = transform  # Add any other arguments you need
+        if length is not None:
+            self.length = length
+        else:
+            self.length = sum(1 for _ in self.dataset)
         
     def _parse_function(self, example_proto):
         # Parse the input `tf.train.Example` proto using the feature description.
-        return tf.io.parse_single_example(example_proto, self.feature_description)
+        x = tf.io.parse_single_example(example_proto, self.feature_description)
+        x = tf.io.parse_tensor(x["image"], out_type=tf.uint8)
+        return x
     
     def __len__(self):
         # This is not very efficient as it goes through the whole dataset.
         # Consider caching the length if it doesn't change.
-        return sum(1 for _ in self.dataset)
+        #return sum(1 for _ in self.dataset)
+        return self.length
     
     def __getitem__(self, idx):
         # Since TFRecord datasets do not support direct indexing, we need to iterate.
@@ -51,7 +59,7 @@ class TFRecordMapDataset(Dataset):
                 example = self._parse_function(raw_record)
                 # Convert the example to a format suitable for your task, e.g., PyTorch tensors
                 # This example assumes a single feature called 'image' which is an image tensor
-                image = example['image'].numpy()  # Convert to numpy array
+                image = example.numpy()
                 image_tensor = torch.from_numpy(image).float()  # Convert to PyTorch tensor
                 if self.transform:
                     image_tensor = self.transform(image_tensor)
@@ -60,7 +68,7 @@ class TFRecordMapDataset(Dataset):
 
 
 class TFRecordIterableDataset(IterableDataset):
-    def __init__(self, tfrecord_files, feature_description, transform=None):
+    def __init__(self, tfrecord_files, feature_description={"image": tf.io.FixedLenFeature([], tf.string)}, transform=None, length=None):
         """
         Example usage:
 
@@ -82,19 +90,29 @@ class TFRecordIterableDataset(IterableDataset):
         """
         self.tfrecord_files = tfrecord_files
         self.feature_description = feature_description
-        self.dataset = tf.data.TFRecordDataset(self.tfrecord_files)
+        self.dataset = tf.data.TFRecordDataset(glob.glob(self.tfrecord_files + "*.tfrecords"))
         self.transform = transform  # Add any other arguments you need
+        self.length = length
+    
+    def __len__(self):
+        if self.length is not None:
+            return self.length
+        else:
+            return sum(1 for _ in self.dataset)
 
     def parse_example(self, example_proto):
         # Parse the input `tf.train.Example` proto using the dictionary.
-        return tf.io.parse_single_example(example_proto, self.feature_description)
+        x = tf.io.parse_single_example(example_proto, self.feature_description)
+        x = tf.io.parse_tensor(x["image"], out_type=tf.uint8)
+
+        return x
     
     def generator(self):
         for raw_record in self.dataset:
             example = self.parse_example(raw_record)
             # Process the example (convert to tensors, etc.)
             # Assuming an image stored as bytes
-            image = tf.io.decode_image(example['image'])
+            image = example.numpy()
             image_tensor = torch.from_numpy(image.numpy()).float()
             if self.transform:
                 image_tensor = self.transform(image_tensor)
