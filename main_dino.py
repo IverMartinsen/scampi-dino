@@ -35,6 +35,7 @@ import utils
 import vision_transformer as vits
 from vision_transformer import DINOHead
 from lora import LoRA_ViT_timm
+from custom_dataloaders import HDF5Dataset
 
 print(f"Using GPU: {torch.cuda.get_device_name(0)}")
 print(f"GPU memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3} GB")
@@ -151,7 +152,9 @@ def train_dino(args):
         args.local_crops_number,
         img_size=args.img_size,
     )
-    dataset = datasets.ImageFolder(args.data_path, transform=transform)
+    
+    #dataset = datasets.ImageFolder(args.data_path, transform=transform)
+    dataset = HDF5Dataset(args.data_path, transform=transform)
     sampler = torch.utils.data.DistributedSampler(dataset, shuffle=True)
     data_loader = torch.utils.data.DataLoader(
         dataset,
