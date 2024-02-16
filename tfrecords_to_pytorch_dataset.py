@@ -1,5 +1,7 @@
+import h5py
 import tensorflow as tf
 import torch
+from PIL import Image
 from torch.utils.data import Dataset, IterableDataset
 
 
@@ -100,3 +102,24 @@ class TFRecordIterableDataset(IterableDataset):
 
     def __iter__(self):
         return iter(self.generator())
+
+
+class HDF5Dataset(Dataset):
+    def __init__(self, hdf5_file, transform=None, *args, **kwargs):
+        super(HDF5Dataset, self).__init__(*args, **kwargs)
+        self.hdf5_file = hdf5_file
+        self.transform = transform
+
+    def __len__(self):
+        with h5py.File(self.hdf5_file, 'r') as h5f:
+            return len(h5f['images'])
+
+    def __getitem__(self, idx):
+        with h5py.File(self.hdf5_file, 'r') as h5f:
+            image = h5f['images'][idx]
+        # Note that the DINO dataloader expects a PIL image
+        image = Image.fromarray(image)
+        if self.transform:
+            image = self.transform(image)
+        # Note that the DINO dataloader expects a tuple (PIL.Image, label)
+        return image, 0
