@@ -134,7 +134,7 @@ if __name__ == '__main__':
     for i in range(10):
         A = np.matmul(A, A)
     
-    heatmap = A[0].reshape(28, 28)
+    heatmap = A[0].reshape(args.image_size[0] // args.patch_size, args.image_size[1] // args.patch_size)
     heatmap = Image.fromarray(np.array(heatmap)).resize((224, 224))
     heatmap = np.array(heatmap)
     heatmap -= np.min(heatmap)
