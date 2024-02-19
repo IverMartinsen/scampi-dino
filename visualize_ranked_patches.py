@@ -140,6 +140,9 @@ if __name__ == '__main__':
         C = np.matmul(C, C)
         C = np.clip(C, 0, 1)
     
+
+    # set upper bound
+    A = np.clip(A, 0, np.percentile(A, 15))
     A = A / np.sum(A, axis=(0))
     A = A.T
     
