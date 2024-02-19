@@ -128,6 +128,18 @@ if __name__ == '__main__':
         A = torch.cdist(patch_tokens, patch_tokens, p=2).numpy()
         A = np.max(A) - A
     
+    # create a one-hot matrix if two patches are 8-connected
+    C = np.zeros((A.shape[0], A.shape[1]))
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            if np.abs(i - j) <= 1 or np.abs(i - j) == 8:
+                C[i, j] = 1
+    
+    # C is a matrix of 4-connected patches
+    for i in range(2):
+        C = np.matmul(C, C)
+        C = np.clip(C, 0, 1)
+    
     A = A / np.sum(A, axis=(0))
     A = A.T
     
