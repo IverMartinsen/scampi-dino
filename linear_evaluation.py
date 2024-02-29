@@ -42,14 +42,17 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=1234, type=int, help='Random seed')
     parser.add_argument('--destination', default='', type=str, help='Destination folder to save results')
     parser.add_argument('--img_size', default=224, type=int)
+    parser.add_argument('--img_size_pred', default=224, type=int)
     args = parser.parse_args()
 
     print("\n".join("%s: %s" % (k, str(v)) for k, v in sorted(dict(vars(args)).items())))
     
     # ============ preparing data ... ============
+    resize = {96: (110, 110), 224: (256, 256)}
+    
     transform = pth_transforms.Compose([
-        pth_transforms.Resize((256, 256), interpolation=3),
-        pth_transforms.CenterCrop(224),
+        pth_transforms.Resize(resize[args.img_size_pred], interpolation=3),
+        pth_transforms.CenterCrop(args.img_size_pred),
         pth_transforms.ToTensor(),
         pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
