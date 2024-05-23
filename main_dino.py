@@ -34,11 +34,13 @@ from torchvision import models as torchvision_models
 import utils
 import vision_transformer as vits
 from vision_transformer import DINOHead
-from lora import LoRA_ViT_timm
-from custom_dataloaders import HDF5Dataset
+#from lora import LoRA_ViT_timm
+from zip_dataloader import ZipFilesDataset
+from hdf5_dataloader import HDF5Dataset, HDF5GroupDataset
 
-print(f"Using GPU: {torch.cuda.get_device_name(0)}")
-print(f"GPU memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3} GB")
+#print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+#print(f"GPU memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3} GB")
+print(f"Using {torch.cuda.device_count()} GPUs")
 
 torchvision_archs = sorted(name for name in torchvision_models.__dict__
     if name.islower() and not name.startswith("__")
@@ -130,7 +132,7 @@ def get_args_parser():
     parser.add_argument('--num_workers', default=10, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
-    parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
+    parser.add_argument("--local-rank", default=0, type=int, help="Please ignore and do not set this argument.")
     parser.add_argument('--pretrained_weights', default=None, type=str, help='Path to pretrained weights to evaluate.')
     parser.add_argument('--lora_rank', default=None, type=int, help='Rank of LoRA.')
     parser.add_argument('--img_size', default=224, type=int, help='Size of input images.')
@@ -152,8 +154,11 @@ def train_dino(args):
         img_size=args.img_size,
     )
     
-    dataset = datasets.ImageFolder(args.data_path, transform=transform)
+    #dataset = datasets.ImageFolder(args.data_path, transform=transform)
     #dataset = HDF5Dataset(args.data_path, transform=transform)
+    #dataset = ZipFilesDataset(args.data_path, transform=transform)
+    #dataset = HDF5Dataset(args.data_path, transform=transform)
+    dataset = HDF5GroupDataset(args.data_path, transform=transform)
     sampler = torch.utils.data.DistributedSampler(dataset, shuffle=True)
     data_loader = torch.utils.data.DataLoader(
         dataset,
