@@ -119,38 +119,70 @@ if __name__ == '__main__':
     cls_token = embeddings[0, 0, :]  # CLS token embedding
     patch_tokens = embeddings[0, 1:, :]  # patch tokens, shape (num_patches, projection_dim)
     # affinitiy matrix
+    
+    args.distance = "inner"
+    
     if args.distance == "inner":
         A = torch.matmul(patch_tokens, patch_tokens.transpose(0, 1)) # shape (num_patches, num_patches)
         # normalize
         A = A - torch.min(A)
         A = A.numpy()
     elif args.distance == "l2":
-        A = torch.cdist(patch_tokens, patch_tokens, p=2).numpy()
-        A = np.max(A) - A
+        from sklearn.metrics import pairwise_distances
+        A = pairwise_distances(patch_tokens.cpu().numpy(), patch_tokens.cpu().numpy(), metric='euclidean')
+        #A = A**2
+        #A = 1 + A
+        #A = 1 / A
+        #beta = 3
+        #A = A**(2/beta)
+    
+    
+    
+    #from sklearn.manifold import MDS, TSNE
+    #embedding = TSNE(n_components=2)
+    ##use A
+    ##X_transformed = embedding.fit_transform(A)
+    #X_transformed = embedding.fit_transform(patch_tokens.cpu().numpy())
+    ## plot
+    #fig, ax = plt.subplots()
+    #ax.scatter(X_transformed[:, 0], X_transformed[:, 1])
+    #for i, txt in enumerate(range(X_transformed.shape[0])):
+    #    ax.annotate(txt, (X_transformed[i, 0], X_transformed[i, 1]))
+    #plt.savefig(os.path.join(args.output_dir, "mds.png"), dpi=300)
+    # =================================================================================
     
     # create a one-hot matrix if two patches are 8-connected
-    C = np.zeros((A.shape[0], A.shape[1]))
-    for i in range(A.shape[0]):
-        for j in range(A.shape[1]):
-            if np.abs(i - j) <= 1 or np.abs(i - j) == 8:
-                C[i, j] = 1
-    
-    # C is a matrix of 4-connected patches
-    for i in range(2):
-        C = np.matmul(C, C)
-        C = np.clip(C, 0, 1)
-    
-
-    # set upper bound
-    A = np.clip(A, 0, np.percentile(A, 15))
+    #C = np.zeros((A.shape[0], A.shape[1]))
+    #for i in range(A.shape[0]):
+    #    for j in range(A.shape[1]):
+    #        if np.abs(i - j) <= 1 or np.abs(i - j) == 8:
+    #            C[i, j] = 1
+    #
+    ## C is a matrix of 4-connected patches
+    #for i in range(2):
+    #    C = np.matmul(C, C)
+    #    C = np.clip(C, 0, 1)
+    #
+#
+    ## set upper bound
+    #A = np.clip(A, 0, np.percentile(A, 15))
+    #A *= 1 - np.eye(A.shape[0])
     A = A / np.sum(A, axis=(0))
     A = A.T
     
-    for i in range(10):
-        A = np.matmul(A, A)
+    alpha = 0.0 # restart probability
+    #R = np.ones(A.shape) / A.shape[0]    
+    R = np.diag(np.ones(A.shape[0]))
     
-    heatmap = A[0].reshape(args.image_size[0] // args.patch_size, args.image_size[1] // args.patch_size)
-    heatmap = Image.fromarray(np.array(heatmap)).resize((224, 224))
+    for i in range(10):
+        #A = np.matmul(A, A)
+        A =  (1 - alpha) * np.matmul(A, A) + alpha * R
+    
+    # extract diagonal of A
+    A = np.diag(A)
+    
+    heatmap = A.reshape(args.image_size[0] // args.patch_size, args.image_size[1] // args.patch_size)
+    heatmap = Image.fromarray(np.array(heatmap)).resize((224, 224), Image.BOX)
     heatmap = np.array(heatmap)
     heatmap -= np.min(heatmap)
     heatmap /= np.max(heatmap)
