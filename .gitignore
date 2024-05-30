@@ -11,3 +11,5 @@ cocoval2017/
 ranked_patches/
 *.pdf
 lumi_jobfile.sh
+make_embeddings.yml
+LUMI jobfiles/

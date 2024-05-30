@@ -24,6 +24,7 @@ class ZipFilesDataset(datasets.DatasetFolder):
         super(ZipFilesDataset, self).__init__(root, loader, transform, *args, **kwargs)
         
         samples = make_dataset(root) # This is a list of file paths in the zip file
+        self.transform = transform
         self.samples = samples
         self.classes = [0]
         self.class_to_idx = {0: 0} 

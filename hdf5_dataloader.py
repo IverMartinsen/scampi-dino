@@ -63,11 +63,17 @@ class HDF5Dataset(datasets.DatasetFolder):
 
 class HDF5GroupDataset(datasets.DatasetFolder):
     def __init__(self, root, loader=load_image_from_hdf5, transform=None, *args, **kwargs):
-        super().__init__(root, loader, transform, *args, **kwargs)
-        
-        samples = make_group_dataset(root)
-        self.transform = transform
-        self.samples = samples
+        super().__init__(
+            root, 
+            loader,
+            transform=transform,
+            target_transform=None,
+            *args, 
+            **kwargs
+            )
+        #samples = make_group_dataset(root)
+        #self.transform = transform
+        #self.samples = samples
         self.classes = [0]
         self.class_to_idx = {0: 0} 
     
