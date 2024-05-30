@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import argparse
 import os
 import sys
@@ -36,7 +35,8 @@ import vision_transformer as vits
 from vision_transformer import DINOHead
 #from lora import LoRA_ViT_timm
 from zip_dataloader import ZipFilesDataset
-from hdf5_dataloader import HDF5Dataset, HDF5GroupDataset
+#from hdf5_dataloader import HDF5Dataset, HDF5GroupDataset
+from hdf5_dataloader_v2 import HDF5GroupDataset, HDF5Dataset
 
 #print(f"Using GPU: {torch.cuda.get_device_name(0)}")
 #print(f"GPU memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3} GB")
@@ -136,6 +136,7 @@ def get_args_parser():
     parser.add_argument('--pretrained_weights', default=None, type=str, help='Path to pretrained weights to evaluate.')
     parser.add_argument('--lora_rank', default=None, type=int, help='Rank of LoRA.')
     parser.add_argument('--img_size', default=224, type=int, help='Size of input images.')
+    parser.add_argument('--dataloader', default='folder', type=str, help='Type of dataloader to use.')
     return parser
 
 
@@ -154,11 +155,15 @@ def train_dino(args):
         img_size=args.img_size,
     )
     
-    #dataset = datasets.ImageFolder(args.data_path, transform=transform)
-    #dataset = HDF5Dataset(args.data_path, transform=transform)
+    if args.dataloader == 'folder':
+        dataset = datasets.ImageFolder(args.data_path, transform=transform)
+    elif args.dataloader == 'hdf5':
+        dataset = HDF5Dataset(args.data_path, transform=transform)
+    elif args.dataloader == 'hdf5_group':
+        dataset = HDF5GroupDataset(args.data_path, transform=transform)
+    else:
+        raise ValueError(f"Unknown dataloader: {args.dataloader}")
     #dataset = ZipFilesDataset(args.data_path, transform=transform)
-    #dataset = HDF5Dataset(args.data_path, transform=transform)
-    dataset = HDF5GroupDataset(args.data_path, transform=transform)
     sampler = torch.utils.data.DistributedSampler(dataset, shuffle=True)
     data_loader = torch.utils.data.DataLoader(
         dataset,
@@ -199,14 +204,14 @@ def train_dino(args):
     else:
         print(f"Unknow architecture: {args.arch}")
     
-    # load pretrained weights if specified
-    if args.pretrained_weights is not None:
-        utils.load_pretrained_weights(student, args.pretrained_weights, None, args.arch, args.patch_size)
+    ## load pretrained weights if specified
+    #if args.pretrained_weights is not None:
+    #    utils.load_pretrained_weights(student, args.pretrained_weights, None, args.arch, args.patch_size)
 
-    # wrap ViT in a LoRA module if specified
-    if args.lora_rank is not None:
-        student = LoRA_ViT_timm(student, r=args.lora_rank)
-        teacher = LoRA_ViT_timm(teacher, r=args.lora_rank)
+    ## wrap ViT in a LoRA module if specified
+    #if args.lora_rank is not None:
+    #    student = LoRA_ViT_timm(student, r=args.lora_rank)
+    #    teacher = LoRA_ViT_timm(teacher, r=args.lora_rank)
     
     # multi-crop wrapper handles forward with inputs of different resolutions
     student = utils.MultiCropWrapper(student, DINOHead(
@@ -220,10 +225,10 @@ def train_dino(args):
         DINOHead(embed_dim, args.out_dim, args.use_bn_in_head),
     )
     
-    if args.lora_rank is not None:
-        # also remember to freeze weights in student head
-        for p in student.head.parameters():
-            p.requires_grad = False
+    #if args.lora_rank is not None:
+    #    # also remember to freeze weights in student head
+    #    for p in student.head.parameters():
+    #        p.requires_grad = False
     
     # move networks to gpu
     student, teacher = student.cuda(), teacher.cuda()
@@ -257,9 +262,7 @@ def train_dino(args):
     ).cuda()
 
     # ============ preparing optimizer ... ============
-    
     params_groups = utils.get_params_groups(student)
-    
     if args.optimizer == "adamw":
         optimizer = torch.optim.AdamW(params_groups)  # to use with ViTs
     elif args.optimizer == "sgd":
@@ -384,11 +387,11 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
                                               args.freeze_last_layer)
             fp16_scaler.step(optimizer)
             fp16_scaler.update()
-        
+
+        # EMA update for the teacher
         with torch.no_grad():
             m = momentum_schedule[it]  # momentum parameter
             for param_q, param_k in zip(student.module.parameters(), teacher_without_ddp.parameters()):
-                #if param_q.requires_grad: # this is a custom modification made to the original code
                 param_k.data.mul_(m).add_((1 - m) * param_q.detach().data)
 
         # logging
@@ -396,8 +399,6 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
         metric_logger.update(loss=loss.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         metric_logger.update(wd=optimizer.param_groups[0]["weight_decay"])
-        
-        
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
@@ -519,5 +520,4 @@ if __name__ == '__main__':
     # save the arguments as a text file
     with open(Path(args.output_dir) / 'args.txt', 'w') as f:
         f.write('\n'.join(sys.argv))
-    
     train_dino(args)
