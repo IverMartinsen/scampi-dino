@@ -30,6 +30,18 @@ def load_png_from_hdf5(path):
     return image
 
 
+def load_jpeg_from_hdf5(path):
+    hdf5_file, key = path
+    with h5py.File(hdf5_file, 'r') as f:
+        bytes = f[key][()]
+        image = torch.tensor(bytes)
+        image = torchvision.io.decode_jpeg(image)
+        image = image.permute(1, 2, 0)
+        image = image.numpy()
+        image = Image.fromarray(image)
+    return image
+
+
 def make_dataset(
     root,
     class_to_idx,
@@ -167,7 +179,7 @@ class HDF5GroupDataset(VisionDataset):
     def __init__(
         self,
         root,
-        loader=load_image_from_hdf5,
+        loader=load_jpeg_from_hdf5,
         extensions=None,
         transform=None,
         target_transform=None,
