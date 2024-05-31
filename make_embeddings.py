@@ -49,8 +49,16 @@ if __name__ == '__main__':
 
 
     for file in files:
+        
         print(f"Processing {file}")
-
+        
+        target_file = os.path.basename(file) + "_features.hdf5"
+                
+        # check if the target file already exists
+        if target_file in os.listdir(args.destination):
+            print(f"File {target_file} already exists. Skipping...")
+            continue
+        
         ds = HDF5Dataset(file, transform=transform)
     
         data_loader = torch.utils.data.DataLoader(
@@ -74,7 +82,7 @@ if __name__ == '__main__':
     
         features = np.concatenate(features, axis=0)
     
-        with h5py.File(os.path.join(args.destination, os.path.basename(file) + ".hdf5"), "w") as f:
+        with h5py.File(os.path.join(args.destination, target_file), 'w') as f:
             f.create_dataset("features", data=features)
             f.create_dataset("filenames", data=filenames[:len(features)])
             f.create_dataset("hdf5_file", data=hdf5_file[:len(features)])
