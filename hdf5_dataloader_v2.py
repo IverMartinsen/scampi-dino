@@ -2,6 +2,7 @@ import os
 import h5py
 import torch
 import torchvision
+import numpy as np
 from torchvision.datasets import VisionDataset
 from PIL import Image
 
@@ -51,7 +52,7 @@ def make_dataset(
     ):
     with h5py.File(root, 'r') as f:
         keys = list(f.keys())
-    return list(zip(keys, [0]*len(keys)))
+    return np.array(list(zip(keys, [0]*len(keys))))
 
 
 def make_group_dataset(
@@ -62,15 +63,13 @@ def make_group_dataset(
     allow_empty=False,
     ):
     files = [f for f in os.listdir(root) if f.endswith('.hdf5')]
-    files = [os.path.join(root, f) for f in files]
     samples = []
     for f in files:
-        with h5py.File(f, 'r') as h:
+        with h5py.File(os.path.join(root, f), 'r') as h:
             keys = list(h.keys())
         n = len(keys)
-        keys = zip([f]*n, keys)
-        samples += list(zip(keys, [0]*n))
-    return samples
+        samples += list(zip([f]*n, keys, [0]*n))
+    return np.array(samples)
 
 
 def find_classes(directory):
@@ -110,7 +109,7 @@ class HDF5Dataset(VisionDataset):
         self.classes = classes
         self.class_to_idx = class_to_idx
         self.samples = samples
-        self.targets = [s[1] for s in samples]
+        self.targets = np.array([s[1] for s in samples])
 
     @staticmethod
     def make_dataset(
@@ -206,7 +205,7 @@ class HDF5GroupDataset(VisionDataset):
         self.classes = classes
         self.class_to_idx = class_to_idx
         self.samples = samples
-        self.targets = [s[1] for s in samples]
+        self.targets = np.array([s[1] for s in samples])
 
     @staticmethod
     def make_dataset(
@@ -229,8 +228,9 @@ class HDF5GroupDataset(VisionDataset):
         return find_classes(directory)
 
     def __getitem__(self, index):
-        path, target = self.samples[index]
-        sample = self.loader(path)
+        filename, key, target = self.samples[index]
+        path = os.path.join(self.root, filename)
+        sample = self.loader((path, key))
         if self.transform is not None:
             sample = self.transform(sample)
         if self.target_transform is not None:
@@ -249,3 +249,4 @@ if __name__ == "__main__":
     image, label = group_dataset[1000000]
     print(f"Image type: {type(image)}")
     print(group_dataset.transform)
+    image.show()
