@@ -85,12 +85,36 @@ if __name__ == '__main__':
     filenames = [os.path.basename(f[0]) for f in ds.imgs]
     class_names = ds.classes
     
+    
+    # compute all pairwise distances
+    print("Computing pairwise distances...")
+    from sklearn.metrics import pairwise_distances
+    dists = pairwise_distances(features, features)
+    # add to the diagonal to make the sorting easier
+    dists += np.eye(len(labels)) * 1e12
+    
+    acc = np.zeros(len(labels))
+    
+    for i in range(len(labels)):
+        k = np.sum(labels == labels[i]) - 1
+        # get the indices of the k nearest neighbors
+        idx = np.argsort(dists[i])[:k]
+        # get the labels of the k nearest neighbors
+        nn_labels = labels[idx]
+        # compute the accuracy
+        acc[i] = np.sum(nn_labels == labels[i]) / k
+    
+    # compute the mean accuracy for all samples
+    os.makedirs(args.destination, exist_ok=True)
+    mean_acc = np.mean(acc)
+    pd.DataFrame(acc).to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
+    pd.DataFrame([mean_acc]).to_csv(os.path.join(args.destination, "cbir_mean_accuracy.csv"))
+    
     print("Features are ready!\nStart the classification.")
     
     for label in np.unique(labels):
         print(f"Class {label} has {np.sum(labels == label)} samples in the data set.")
     
-    os.makedirs(args.destination, exist_ok=True)
 
     summary_table = pd.DataFrame()
     summary_tables_knn = {k: pd.DataFrame() for k in args.nb_knn}
