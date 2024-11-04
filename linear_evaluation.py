@@ -93,28 +93,47 @@ if __name__ == '__main__':
     # add to the diagonal to make the sorting easier
     dists += np.eye(len(labels)) * 1e12
     
-    acc = np.zeros(len(labels))
+    def compute_recall_at_k(labels, dists, k='k'):
+        prec_at_k = np.zeros(len(labels))
+        rec_at_k = np.zeros(len(labels))
+
+        for i in range(len(labels)):
+            if k == 'k':
+                _k = np.sum(labels == labels[i]) - 1
+            else:
+                _k = k
+            # get the indices of the k nearest neighbors
+            idx = np.argsort(dists[i])[:_k]
+            # get the labels of the k nearest neighbors
+            nn_labels = labels[idx]
+            # count the number of relevant retrieved samples
+            n_relevant_retrieved = np.sum(nn_labels == labels[i])
+            # count the number of relevant samples
+            n_relevant = np.sum(labels == labels[i]) - 1
+            # compute the precision at k
+            prec_at_k[i] =  n_relevant_retrieved / _k
+            # compute the recall at k
+            rec_at_k[i] = n_relevant_retrieved / n_relevant
+        return prec_at_k, rec_at_k
     
-    for i in range(len(labels)):
-        k = np.sum(labels == labels[i]) - 1
-        # get the indices of the k nearest neighbors
-        idx = np.argsort(dists[i])[:k]
-        # get the labels of the k nearest neighbors
-        nn_labels = labels[idx]
-        # compute the accuracy
-        acc[i] = np.sum(nn_labels == labels[i]) / k
-    
+    cbir_df = pd.DataFrame()
+    cbir_mean_df = pd.DataFrame()
+    for k in ['k', 10, 20, 50, 100]:
+        prec_at_k, rec_at_k = compute_recall_at_k(labels, dists, k)
+        cbir_df[f"precision_at_{k}"] = prec_at_k
+        cbir_df[f"recall_at_{k}"] = rec_at_k
+        cbir_mean_df.loc["precision", k] = np.mean(prec_at_k)
+        cbir_mean_df.loc["recall", k] = np.mean(rec_at_k)
+
     # compute the mean accuracy for all samples
     os.makedirs(args.destination, exist_ok=True)
-    mean_acc = np.mean(acc)
-    pd.DataFrame(acc).to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
-    pd.DataFrame([mean_acc]).to_csv(os.path.join(args.destination, "cbir_mean_accuracy.csv"))
+    cbir_df.to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
+    cbir_mean_df.to_csv(os.path.join(args.destination, "cbir_mean_accuracy.csv"))
     
     print("Features are ready!\nStart the classification.")
     
     for label in np.unique(labels):
         print(f"Class {label} has {np.sum(labels == label)} samples in the data set.")
-    
 
     summary_table = pd.DataFrame()
     summary_tables_knn = {k: pd.DataFrame() for k in args.nb_knn}
@@ -180,4 +199,3 @@ if __name__ == '__main__':
     summary_table.to_csv(os.path.join(args.destination, "summary_metrics.csv"))
 
     print("Summary metrics saved.")
-    
