@@ -3,6 +3,7 @@ import argparse
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 import torch
 from torchvision import datasets
@@ -21,7 +22,7 @@ from sklearn.metrics import (
     recall_score,
     confusion_matrix,
     ConfusionMatrixDisplay,
-    f1_score,
+    auc,
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -116,15 +117,37 @@ if __name__ == '__main__':
             rec_at_k[i] = n_relevant_retrieved / n_relevant
         return prec_at_k, rec_at_k
     
+    
     cbir_df = pd.DataFrame()
     cbir_mean_df = pd.DataFrame()
-    for k in ['k', 10, 20, 50, 100]:
+    for k in ['k', 1] + [i for i in range(10, 200, 10)] + [500]:
         prec_at_k, rec_at_k = compute_recall_at_k(labels, dists, k)
         cbir_df[f"precision_at_{k}"] = prec_at_k
         cbir_df[f"recall_at_{k}"] = rec_at_k
         cbir_mean_df.loc["precision", k] = np.mean(prec_at_k)
         cbir_mean_df.loc["recall", k] = np.mean(rec_at_k)
 
+    # plot the precision-recall curve
+    x = cbir_mean_df.loc["recall"].values
+    y = cbir_mean_df.loc["precision"].values
+    idx = np.argsort(x)
+    x = x[idx]
+    y = y[idx]
+    x = [0] + list(x) + [1]
+    y = [1] + list(y) + [0]
+    
+    area = auc(x, y)
+    
+    plt.figure(figsize=(10, 5))
+    plt.plot(x, y, label=f"Area under the curve: {area:.2f}", marker="o", linestyle="--", linewidth=2)
+    plt.xlabel("Recall", fontsize=15)
+    plt.ylabel("Precision", fontsize=15)
+    plt.legend(fontsize=15)
+    plt.tight_layout()
+    plt.savefig(os.path.join(args.destination, "precision_recall_curve_cbir.pdf"))
+    plt.close()
+
+    
     # compute the mean accuracy for all samples
     os.makedirs(args.destination, exist_ok=True)
     cbir_df.to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
