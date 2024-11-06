@@ -23,6 +23,7 @@ from sklearn.metrics import (
     confusion_matrix,
     ConfusionMatrixDisplay,
     auc,
+    f1_score
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -63,12 +64,17 @@ if __name__ == '__main__':
     
     # ============ building network ... ============
     print("Building network...")
-    model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0, img_size=[args.img_size])
-    print(f"Model {args.arch} {args.patch_size}x{args.patch_size} built.")
+    if args.pretrained_weights == 'dinov2':
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
+    else:
+        model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0, img_size=[args.img_size])
+        print(f"Model {args.arch} {args.patch_size}x{args.patch_size} built.")
+        
+        if args.lora_rank is not None:
+            model = LoRA_ViT_timm(model, r=args.lora_rank)
+        utils.load_pretrained_weights(model, args.pretrained_weights, args.checkpoint_key, args.arch, args.patch_size)
     
-    if args.lora_rank is not None:
-        model = LoRA_ViT_timm(model, r=args.lora_rank)
-    utils.load_pretrained_weights(model, args.pretrained_weights, args.checkpoint_key, args.arch, args.patch_size)
     model.eval()
         
     # ============ extract features ... ============
@@ -206,6 +212,7 @@ if __name__ == '__main__':
             summary_tables_knn[k].loc[f"k={k}_seed={seed}", "balanced_accuracy"] = balanced_accuracy_score(y_test, y_pred)
             summary_tables_knn[k].loc[f"k={k}_seed={seed}", "accuracy"] = accuracy_score(y_test, y_pred)
             summary_tables_knn[k].loc[f"k={k}_seed={seed}", "mean_precision"] = precision_score(y_test, y_pred, average="macro")
+            summary_tables_knn[k].loc[f"k={k}_seed={seed}", "f1_score"] = f1_score(y_test, y_pred, average="macro")
     
     # ============ summary ... ============
     cm = confusion_matrix(np.concatenate(conf_mat_stats['labels']), np.concatenate(conf_mat_stats['preds']))
