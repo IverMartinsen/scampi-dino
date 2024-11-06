@@ -86,6 +86,7 @@ if __name__ == '__main__':
     filenames = [os.path.basename(f[0]) for f in ds.imgs]
     class_names = ds.classes
     
+    os.makedirs(args.destination, exist_ok=True)
     
     # compute all pairwise distances
     print("Computing pairwise distances...")
@@ -149,7 +150,7 @@ if __name__ == '__main__':
 
     
     # compute the mean accuracy for all samples
-    os.makedirs(args.destination, exist_ok=True)
+    
     cbir_df.to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
     cbir_mean_df.to_csv(os.path.join(args.destination, "cbir_mean_accuracy.csv"))
     
