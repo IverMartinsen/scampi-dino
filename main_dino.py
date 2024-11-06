@@ -478,7 +478,7 @@ class DataAugmentationDINO(object):
         ])
         normalize = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            transforms.Normalize((0.666, 0.576, 0.472), (0.206, 0.234, 0.279)),
         ])
 
         # first global crop

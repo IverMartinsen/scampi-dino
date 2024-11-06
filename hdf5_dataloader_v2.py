@@ -250,3 +250,22 @@ if __name__ == "__main__":
     print(f"Image type: {type(image)}")
     print(group_dataset.transform)
     image.show()
+    
+    # compute RGB mean and std for the dataset
+    mean = []
+    std = []
+    
+    idx = np.random.choice(len(group_dataset), 100000)
+    
+    for i in range(len(group_dataset)):
+        img, _ = group_dataset[idx[i]]
+        img = img.resize((224, 224))
+        img = np.array(img)
+        img = img / 255.
+        mean.append(np.mean(img, axis=(0,1)))
+        std.append(np.std(img, axis=(0,1)))
+        if i % 1000 == 0:
+            print(f"Processed {i} images")
+    
+    mean = np.array(mean).mean(axis=0)
+    std = np.array(std).mean(axis=0)
