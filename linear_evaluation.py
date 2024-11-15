@@ -1,4 +1,5 @@
 import os
+import json
 import argparse
 
 import numpy as np
@@ -51,6 +52,9 @@ if __name__ == '__main__':
     # ============ preparing data ... ============
     resize = {96: (110, 110), 224: (256, 256)}
     
+    imagenet_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
+    micronet_stats = (0.666, 0.576, 0.472), (0.206, 0.234, 0.279)
+    
     transform = pth_transforms.Compose([
         pth_transforms.Resize(resize[args.img_size_pred], interpolation=3),
         pth_transforms.CenterCrop(args.img_size_pred),
@@ -76,7 +80,37 @@ if __name__ == '__main__':
         utils.load_pretrained_weights(model, args.pretrained_weights, args.checkpoint_key, args.arch, args.patch_size)
     
     model.eval()
-        
+    
+    # get model attributes
+    checkpoint = torch.load(args.pretrained_weights, map_location="cpu")
+    
+    train_args = {}
+    for a in vars(checkpoint["args"]):
+        train_args[a] = getattr(checkpoint["args"], a)
+    
+    summary_json = {}
+    summary_json["batch_size"] = train_args["batch_size_per_gpu"] * train_args["world_size"]
+    summary_json["learning_rate"] = train_args["lr"]
+    summary_json["momentum"] = train_args["momentum_teacher"]
+    summary_json["num_epochs"] = train_args["epochs"]
+    
+    files_used = train_args["data_path"].split("/")[5]
+    print(f"Files used: {files_used}")
+    if files_used.endswith("test"):
+        summary_json["dataset_size"] = 3074560
+    elif files_used.endswith("16"):
+        summary_json["dataset_size"] = 1537280
+    elif files_used.endswith("8"):
+        summary_json["dataset_size"] = 768640
+    elif files_used.endswith("4"):
+        summary_json["dataset_size"] = 384320
+    elif files_used.endswith("2"):
+        summary_json["dataset_size"] = 192160
+    elif files_used.endswith("1"):
+        summary_json["dataset_size"] = 96080
+    else:
+        summary_json["dataset_size"] = 0
+
     # ============ extract features ... ============
     print("Extracting features...")
 
@@ -179,7 +213,7 @@ if __name__ == '__main__':
         
         # ============ logistic regression ... ============
         log_model = LogisticRegression(
-            max_iter=10000,
+            max_iter=100,
             multi_class="multinomial",
             class_weight="balanced",
             random_state=seed,
@@ -213,7 +247,55 @@ if __name__ == '__main__':
             summary_tables_knn[k].loc[f"k={k}_seed={seed}", "accuracy"] = accuracy_score(y_test, y_pred)
             summary_tables_knn[k].loc[f"k={k}_seed={seed}", "mean_precision"] = precision_score(y_test, y_pred, average="macro")
             summary_tables_knn[k].loc[f"k={k}_seed={seed}", "f1_score"] = f1_score(y_test, y_pred, average="macro")
-    
+
+        # ============ OOD detection ... ============
+        for k in np.unique(labels):
+            X_train_in, X_test_in = X_train[y_train != k], X_test[y_test != k]
+            X_test_out = np.concatenate((X_test[y_test == k], X_train[y_train == k]), axis=0)
+            y_test_in = np.ones(len(X_test_in))
+            y_test_out = np.zeros(len(X_test_out))
+            
+            X_test_ood = np.concatenate([X_test_in, X_test_out], axis=0)
+            y_test_ood = np.concatenate([y_test_in, y_test_out], axis=0)
+            
+            #log_model = LogisticRegression(
+            #    max_iter=1000,
+            #    multi_class="multinomial",
+            #    class_weight="balanced",
+            #    random_state=seed,
+            #)
+            #log_model.fit(X_train_in, y_train[y_train != k])
+            #ood_proba = log_model.predict_proba(X_test_ood)
+            #ood_entropy = -np.sum(ood_proba * np.log(ood_proba + 1e-12), axis=1)
+            
+            
+            ood_dists = pairwise_distances(X_test_ood, X_train_in)
+            
+            # MDS visualization
+            #from sklearn.manifold import MDS
+            #mds = MDS(n_components=2, random_state=seed)
+            #mds.fit(np.concatenate([X_train_in, X_test_ood], axis=0))
+            #xy = mds.embedding_
+            #plt.figure(figsize=(10, 5))
+            #plt.scatter(xy[:len(X_train_in), 0], xy[:len(X_train_in), 1], label="Train", alpha=0.5)
+            #plt.scatter(xy[len(X_train_in):, 0], xy[len(X_train_in):, 1], label="Test", alpha=0.5, c=y_test_ood)
+            #plt.legend()
+            #plt.tight_layout()
+            #plt.show()
+            
+            
+            ood_dists = ood_dists.mean(axis=1)
+            
+            #plt.figure(figsize=(10, 5))
+            #plt.hist(ood_dists[y_test_ood == 0], bins=10, alpha=0.5, label="OOD", density=True)
+            #plt.hist(ood_dists[y_test_ood == 1], bins=10, alpha=0.5, label="IN", density=True)
+            #plt.legend()
+            #plt.xlabel("Mean distance to IN samples")
+            #plt.ylabel("Number of samples")
+            #plt.title(f"OOD detection for class {class_names[k]}")
+            #plt.tight_layout()
+            #plt.show()
+        
     # ============ summary ... ============
     cm = confusion_matrix(np.concatenate(conf_mat_stats['labels']), np.concatenate(conf_mat_stats['preds']))
     cm_display = ConfusionMatrixDisplay(cm, display_labels=class_names)
@@ -229,4 +311,11 @@ if __name__ == '__main__':
     
     summary_table.to_csv(os.path.join(args.destination, "summary_metrics.csv"))
 
+    summary_json["log_loss"] = summary_table.loc["mean", "log_loss"]
+    summary_json["cbir_accuracy"] = cbir_mean_df.loc["precision", "k"]
+    summary_json["nn_f1"] = summary_tables_knn[1].mean()["f1_score"]
+    
+    with open(os.path.join(args.destination, "summary_metrics.json"), "w") as f:
+        json.dump(summary_json, f)
+    
     print("Summary metrics saved.")
