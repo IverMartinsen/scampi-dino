@@ -159,7 +159,7 @@ if __name__ == '__main__':
     summary_table = pd.DataFrame()
     summary_tables_knn = {k: pd.DataFrame() for k in args.nb_knn}
 
-    
+    multiple_dists = False
     
     for seed in range(10):
     
@@ -177,22 +177,28 @@ if __name__ == '__main__':
             
             #knn = NearestNeighbors(n_neighbors=k, p=2, metric="precomputed")
             
-            preds = []
+            if multiple_dists:
             
-            for i, dist in enumerate(dists):
-                knn = KNeighborsClassifier(n_neighbors=k, p=2, metric="precomputed")
-                knn.fit(dist[train_idx][:, train_idx], labels[train_idx])
-            
-                y_pred = knn.predict_proba(dist[test_idx][:, train_idx])
+                preds = []
                 
-                #y_pred = knn.kneighbors(dist[test_idx][:, train_idx])[1]
-                #y_pred = labels[train_idx][y_pred]
-                #y_pred = np.array([np.argmax(np.bincount(i)) for i in y_pred])
-                preds.append(y_pred)
-            
-            y_pred = np.stack(preds, axis=1)
-            y_pred = np.mean(y_pred, axis=1)
-            y_pred = np.argmax(y_pred, axis=1)
+                for i, dist in enumerate(dists):
+                    knn = KNeighborsClassifier(n_neighbors=k, p=2, metric="precomputed")
+                    knn.fit(dist[train_idx][:, train_idx], labels[train_idx])
+                
+                    y_pred = knn.predict_proba(dist[test_idx][:, train_idx])
+                    
+                    #y_pred = knn.kneighbors(dist[test_idx][:, train_idx])[1]
+                    #y_pred = labels[train_idx][y_pred]
+                    #y_pred = np.array([np.argmax(np.bincount(i)) for i in y_pred])
+                    preds.append(y_pred)
+                
+                y_pred = np.stack(preds, axis=1)
+                y_pred = np.mean(y_pred, axis=1)
+                y_pred = np.argmax(y_pred, axis=1)
+            else:
+                knn = KNeighborsClassifier(n_neighbors=k, p=2, metric="precomputed")
+                knn.fit(dists[train_idx][:, train_idx], labels[train_idx])
+                y_pred = knn.predict(dists[test_idx][:, train_idx])
             
             #knn.fit(X_train, y_train)
             
