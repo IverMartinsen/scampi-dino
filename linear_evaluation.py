@@ -24,11 +24,13 @@ from sklearn.metrics import (
     confusion_matrix,
     ConfusionMatrixDisplay,
     auc,
-    f1_score
+    f1_score,
+    pairwise_distances
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from lora import LoRA_ViT_timm
+from cbir_utils import compute_recall_at_k, plot_precision_recall_curve, retrieve_filenames
 
 
 if __name__ == '__main__':
@@ -133,41 +135,20 @@ if __name__ == '__main__':
     labels = np.concatenate(labels, axis=0)
     filenames = [os.path.basename(f[0]) for f in ds.imgs]
     class_names = ds.classes
+
+    print("Features are ready!\nStart the classification.")
+    
+    for label in np.unique(labels):
+        print(f"Class {label} has {np.sum(labels == label)} samples in the data set.")
     
     os.makedirs(args.destination, exist_ok=True)
     
-    # compute all pairwise distances
-    print("Computing pairwise distances...")
-    from sklearn.metrics import pairwise_distances
+    print("CBIR evaluation...")
+    
     dists = pairwise_distances(features, features)
-    # add to the diagonal to make the sorting easier
     dists += np.eye(len(labels)) * 1e12
     
-    def compute_recall_at_k(labels, dists, k='k'):
-        prec_at_k = np.zeros(len(labels))
-        rec_at_k = np.zeros(len(labels))
-
-        for i in range(len(labels)):
-            if k == 'k':
-                _k = np.sum(labels == labels[i]) - 1
-            else:
-                _k = k
-            # get the indices of the k nearest neighbors
-            idx = np.argsort(dists[i])[:_k]
-            # get the labels of the k nearest neighbors
-            nn_labels = labels[idx]
-            # count the number of relevant retrieved samples
-            n_relevant_retrieved = np.sum(nn_labels == labels[i])
-            # count the number of relevant samples
-            n_relevant = np.sum(labels == labels[i]) - 1
-            # compute the precision at k
-            prec_at_k[i] =  n_relevant_retrieved / _k
-            # compute the recall at k
-            rec_at_k[i] = n_relevant_retrieved / n_relevant
-        return prec_at_k, rec_at_k
-    
-    
-    cbir_df = pd.DataFrame()
+    cbir_df = pd.DataFrame({"label": labels, "filename": filenames})
     cbir_mean_df = pd.DataFrame()
     for k in ['k', 1] + [i for i in range(10, 200, 10)] + [500]:
         prec_at_k, rec_at_k = compute_recall_at_k(labels, dists, k)
@@ -241,34 +222,15 @@ if __name__ == '__main__':
     # plot the precision-recall curve
     x = cbir_mean_df.loc["recall"].values
     y = cbir_mean_df.loc["precision"].values
-    idx = np.argsort(x)
-    x = x[idx]
-    y = y[idx]
-    x = [0] + list(x) + [1]
-    y = [1] + list(y) + [0]
+    fname = os.path.join(args.destination, "precision_recall_curve_cbir.pdf")
     
-    area = auc(x, y)
-    
-    plt.figure(figsize=(10, 5))
-    plt.plot(x, y, label=f"Area under the curve: {area:.2f}", marker="o", linestyle="--", linewidth=2)
-    plt.xlabel("Recall", fontsize=15)
-    plt.ylabel("Precision", fontsize=15)
-    plt.legend(fontsize=15)
-    plt.tight_layout()
-    plt.savefig(os.path.join(args.destination, "precision_recall_curve_cbir.pdf"))
-    plt.close()
-
-    
-    # compute the mean accuracy for all samples
+    plot_precision_recall_curve(x, y, fname)
     
     cbir_df.to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
     cbir_mean_df.to_csv(os.path.join(args.destination, "cbir_mean_accuracy.csv"))
     
-    print("Features are ready!\nStart the classification.")
+    print("CBIR evaluation done.")
     
-    for label in np.unique(labels):
-        print(f"Class {label} has {np.sum(labels == label)} samples in the data set.")
-
     summary_table = pd.DataFrame()
     summary_tables_knn = {k: pd.DataFrame() for k in args.nb_knn}
     class_wise_nn_stats = []
@@ -284,7 +246,7 @@ if __name__ == '__main__':
         
         # ============ logistic regression ... ============
         log_model = LogisticRegression(
-            max_iter=100,
+            max_iter=10000,
             multi_class="multinomial",
             class_weight="balanced",
             random_state=seed,
