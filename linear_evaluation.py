@@ -70,7 +70,12 @@ if __name__ == '__main__':
     print("Building network...")
     if args.pretrained_weights == 'dinov2':
         torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
-        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
+        if args.arch == 'vit_small':
+            model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
+        elif args.arch == 'vit_base':
+            model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14')
+        else:
+            raise ValueError(f"Architecture {args.arch} not supported with DINOv2 weights)")
     else:
         model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0, img_size=[args.img_size])
         print(f"Model {args.arch} {args.patch_size}x{args.patch_size} built.")
