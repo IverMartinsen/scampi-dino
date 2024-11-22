@@ -176,6 +176,68 @@ if __name__ == '__main__':
         cbir_mean_df.loc["precision", k] = np.mean(prec_at_k)
         cbir_mean_df.loc["recall", k] = np.mean(rec_at_k)
 
+    # filenames of the top5 and bot5
+    top10 = cbir_df["filename"][cbir_df["precision_at_k"].argsort()[-10:][::-1]]
+    bot10 = cbir_df["filename"][cbir_df["precision_at_k"].argsort()[:10]]
+
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    
+    def get_cname(fname):
+        lab = labels[np.where(np.array(filenames) == fname)[0][0]]
+        return class_names[lab]
+    
+    def get_fpath(fname):
+        return os.path.join(args.data_path, get_cname(fname), fname)
+    
+    def get_precision_at_k(fname):
+        return cbir_df[cbir_df["filename"] == fname][f"precision_at_k"].values[0]
+    
+    fig, axes = plt.subplots(10, 10, figsize=(20, 20))
+    
+    for i in range(10):
+        query = top10.iloc[i]
+        axes[i, 0].imshow(Image.open(get_fpath(query)).resize((224, 224)))
+        axes[i, 0].set_title(get_cname(query) + " (query)" + f"\n(precision@k={get_precision_at_k(query):.2f})")
+        axes[i, 0].axis("off")
+        
+        retrieved_filenames = retrieve_filenames(query, labels, filenames, dists)
+        
+        for j in range(1, 10):
+            axes[i, j].imshow(Image.open(get_fpath(retrieved_filenames[j])).resize((224, 224)))
+            axes[i, j].set_title(get_cname(retrieved_filenames[j]))
+            axes[i, j].axis("off")
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(args.destination, "top10_retrieved_images.pdf"), bbox_inches="tight", dpi=300)
+    plt.close()
+
+    fig, axes = plt.subplots(10, 10, figsize=(20, 20))
+    
+    for i in range(10):
+        query = bot10.iloc[i]
+        axes[i, 0].imshow(Image.open(get_fpath(query)).resize((224, 224)))
+        axes[i, 0].set_title(get_cname(query) + " (query)" + f"\n(precision@k={get_precision_at_k(query):.2f})")
+        axes[i, 0].axis("off")
+        
+        retrieved_filenames = retrieve_filenames(query, labels, filenames, dists)
+        
+        for j in range(1, 10):
+            axes[i, j].imshow(Image.open(get_fpath(retrieved_filenames[j])).resize((224, 224)))
+            axes[i, j].set_title(get_cname(retrieved_filenames[j]))
+            axes[i, j].axis("off")
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(args.destination, "bot10_retrieved_images.pdf"), bbox_inches="tight", dpi=300)
+    plt.close()
+
+
+    # compute mean for each class
+    pd.DataFrame({
+        "class": np.unique(labels),
+        "precision_at_k": [cbir_df["precision_at_k"][cbir_df["label"] == k].mean() for k in np.unique(labels)]},
+    ).to_csv(os.path.join(args.destination, "cbir_classwise.csv"))
+    
     # plot the precision-recall curve
     x = cbir_mean_df.loc["recall"].values
     y = cbir_mean_df.loc["precision"].values
