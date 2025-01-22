@@ -42,7 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--arch', default='vit_small', type=str, help='Architecture')
     parser.add_argument('--patch_size', default=16, type=int, help='Patch resolution of the model.')
     parser.add_argument("--checkpoint_key", default="teacher", type=str, help='Key to use in the checkpoint (example: "teacher")')
-    parser.add_argument('--data_path', default='/Users/ima029/Desktop/NO 6407-6-5/labelled imagefolders/imagefolder_20', type=str, help='Path to evaluation dataset')
+    parser.add_argument('--data_path', default='/Users/ima029/Desktop/NO 6407-6-5/data/labelled imagefolders/imagefolder_20', type=str, help='Path to evaluation dataset')
     parser.add_argument('--lora_rank', default=None, type=int, help='Rank of LoRA projection matrix')
     parser.add_argument('--destination', default='', type=str, help='Destination folder for saving results')
     parser.add_argument('--img_size', default=224, type=int, help='The size of the images used for training the model')
