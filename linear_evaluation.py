@@ -12,6 +12,8 @@ from torchvision import transforms as pth_transforms
 
 import utils
 import vision_transformer as vits
+import vit_mae as vits_mae
+from timm.models.layers import trunc_normal_
 
 from sklearn.neighbors import KNeighborsClassifier  
 from sklearn.metrics import (
@@ -70,7 +72,58 @@ if __name__ == '__main__':
     
     # ============ building network ... ============
     print("Building network...")
-    if args.pretrained_weights == 'dinov2':
+    
+    if args.pretrained_weights == 'vit_mae':
+    
+        def interpolate_pos_embed(model, checkpoint_model):
+            if 'pos_embed' in checkpoint_model:
+                pos_embed_checkpoint = checkpoint_model['pos_embed']
+                embedding_size = pos_embed_checkpoint.shape[-1]
+                num_patches = model.patch_embed.num_patches
+                num_extra_tokens = model.pos_embed.shape[-2] - num_patches
+                # height (== width) for the checkpoint position embedding
+                orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
+                # height (== width) for the new position embedding
+                new_size = int(num_patches ** 0.5)
+                # class_token and dist_token are kept unchanged
+                if orig_size != new_size:
+                    print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
+                    extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
+                    # only the position tokens are interpolated
+                    pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
+                    pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
+                    pos_tokens = torch.nn.functional.interpolate(
+                        pos_tokens, size=(new_size, new_size), mode='bicubic', align_corners=False)
+                    pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
+                    new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
+                    checkpoint_model['pos_embed'] = new_pos_embed
+        
+        args.arch = 'vit_base_patch16'
+        
+        global_pool = True
+        
+        model = vits_mae.__dict__[args.arch](num_classes=0, drop_path_rate=0.1, global_pool=global_pool)
+        checkpoint = torch.load('/Users/ima029/Downloads/mae_pretrain_vit_base.pth', map_location="cpu")
+        checkpoint_model = checkpoint["model"]
+        state_dict = model.state_dict()
+        for k in ['head.weight', 'head.bias']:
+            if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
+                print(f"Removing key {k} from pretrained checkpoint")
+                del checkpoint_model[k]
+        
+        interpolate_pos_embed(model, checkpoint_model)
+        
+        msg = model.load_state_dict(checkpoint_model, strict=False)
+        print(f"Missing keys when loading pretrained weights: {msg.missing_keys}")
+        
+        #if global_pool:
+        #    assert set(msg.missing_keys) == {'head.weight', 'head.bias', 'fc_norm.weight', 'fc_norm.bias'}
+        #else:
+        #    assert set(msg.missing_keys) == {'head.weight', 'head.bias'}
+        
+        #trunc_normal_(model.head.weight, std=2e-5)
+    
+    elif args.pretrained_weights == 'dinov2':
         torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
         if args.arch == 'vit_small':
             model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
@@ -89,37 +142,37 @@ if __name__ == '__main__':
     model.eval()
     
     # get model attributes
-    try:
-        checkpoint = torch.load(args.pretrained_weights, map_location="cpu")
-    
-        train_args = {}
-        for a in vars(checkpoint["args"]):
-            train_args[a] = getattr(checkpoint["args"], a)
-        
-        summary_json = {}
-        summary_json["batch_size"] = train_args["batch_size_per_gpu"] * train_args["world_size"]
-        summary_json["learning_rate"] = train_args["lr"]
-        summary_json["momentum"] = train_args["momentum_teacher"]
-        summary_json["num_epochs"] = train_args["epochs"]
-        
-        files_used = train_args["data_path"].split("/")[5]
-        print(f"Files used: {files_used}")
-        if files_used.endswith("test"):
-            summary_json["dataset_size"] = 3074560
-        elif files_used.endswith("16"):
-            summary_json["dataset_size"] = 1537280
-        elif files_used.endswith("8"):
-            summary_json["dataset_size"] = 768640
-        elif files_used.endswith("4"):
-            summary_json["dataset_size"] = 384320
-        elif files_used.endswith("2"):
-            summary_json["dataset_size"] = 192160
-        elif files_used.endswith("1"):
-            summary_json["dataset_size"] = 96080
-        else:
-            summary_json["dataset_size"] = 0
-    except FileNotFoundError:
-        print("Checkpoint not found.")
+    #try:
+    #    checkpoint = torch.load(args.pretrained_weights, map_location="cpu")
+    #
+    #    train_args = {}
+    #    for a in vars(checkpoint["args"]):
+    #        train_args[a] = getattr(checkpoint["args"], a)
+    #    
+    #    summary_json = {}
+    #    summary_json["batch_size"] = train_args["batch_size_per_gpu"] * train_args["world_size"]
+    #    summary_json["learning_rate"] = train_args["lr"]
+    #    summary_json["momentum"] = train_args["momentum_teacher"]
+    #    summary_json["num_epochs"] = train_args["epochs"]
+    #    
+    #    files_used = train_args["data_path"].split("/")[5]
+    #    print(f"Files used: {files_used}")
+    #    if files_used.endswith("test"):
+    #        summary_json["dataset_size"] = 3074560
+    #    elif files_used.endswith("16"):
+    #        summary_json["dataset_size"] = 1537280
+    #    elif files_used.endswith("8"):
+    #        summary_json["dataset_size"] = 768640
+    #    elif files_used.endswith("4"):
+    #        summary_json["dataset_size"] = 384320
+    #    elif files_used.endswith("2"):
+    #        summary_json["dataset_size"] = 192160
+    #    elif files_used.endswith("1"):
+    #        summary_json["dataset_size"] = 96080
+    #    else:
+    #        summary_json["dataset_size"] = 0
+    #except FileNotFoundError:
+    #    print("Checkpoint not found.")
 
     # ============ extract features ... ============
     print("Extracting features...")
@@ -128,7 +181,11 @@ if __name__ == '__main__':
     labels = []
 
     for samples, labs in data_loader:
-        features.append(model(samples).detach().numpy())
+        if args.pretrained_weights == 'vit_mae':
+            y = model.forward_features(samples)
+        else:
+            y = model(samples)
+        features.append(y.detach().numpy())
         labels.append(labs.detach().numpy())
     
     features = np.concatenate(features, axis=0)
