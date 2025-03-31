@@ -41,7 +41,7 @@ def load_dinov2_model(args):
     return model
 
 def load_dino_model(args):
-    model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0, img_size=[args.img_size])
+    model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0)
     utils.load_pretrained_weights(model, args.pretrained_weights, args.checkpoint_key, args.arch, args.patch_size)
     return model
 
