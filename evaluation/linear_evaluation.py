@@ -1,5 +1,4 @@
 import os
-import json
 import argparse
 
 import numpy as np
@@ -21,7 +20,6 @@ from sklearn.metrics import (
     recall_score,
     confusion_matrix,
     ConfusionMatrixDisplay,
-    auc,
     f1_score,
     pairwise_distances
 )
@@ -29,7 +27,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from cbir_utils import compute_recall_at_k, plot_precision_recall_curve, retrieve_filenames
 from eval_utils import load_vit_mae_model, load_dinov2_model, load_dino_model
-
+from PIL import Image
 
 if __name__ == '__main__':
 
@@ -96,43 +94,61 @@ if __name__ == '__main__':
     
     os.makedirs(args.destination, exist_ok=True)
     
+    # ============ CBIR evaluation ... ============
     print("CBIR evaluation...")
     
     dists = pairwise_distances(features, features)
     dists += np.eye(len(labels)) * 1e12
     
-    cbir_df = pd.DataFrame({"label": labels, "filename": filenames})
-    cbir_mean_df = pd.DataFrame()
+    cbir_df = pd.DataFrame({"label": labels, "filename": filenames}) # DataFrame with CBIR metrics for each image 
+    cbir_mean_df = pd.DataFrame() # DataFrame with mean CBIR metrics
     for k in ['k', 1] + [i for i in range(10, 200, 10)] + [500]:
         prec_at_k, rec_at_k = compute_recall_at_k(labels, dists, k)
         cbir_df[f"precision_at_{k}"] = prec_at_k
         cbir_df[f"recall_at_{k}"] = rec_at_k
         cbir_mean_df.loc["precision", k] = np.mean(prec_at_k)
         cbir_mean_df.loc["recall", k] = np.mean(rec_at_k)
+    
+    cbir_classwise_df = pd.DataFrame({ # DataFrame with mean CBIR metrics for each class
+        "class": np.unique(labels),
+        "precision_at_k": [cbir_df["precision_at_k"][cbir_df["label"] == k].mean() for k in np.unique(labels)]},
+    )
 
-    # filenames of the top5 and bot5
+    cbir_df.to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
+    cbir_mean_df.to_csv(os.path.join(args.destination, "cbir_mean_accuracy.csv"))
+    cbir_classwise_df.to_csv(os.path.join(args.destination, "cbir_classwise.csv"))
+    
+    # plot the precision-recall curve
+    x = cbir_mean_df.loc["recall"].values
+    y = cbir_mean_df.loc["precision"].values
+    fname = os.path.join(args.destination, "precision_recall_curve_cbir.jpg")
+    
+    plot_precision_recall_curve(x, y, fname)
+    
+    print("CBIR evaluation done.")
+    
+    # ============ CBIR visualization ... ============
+    
+    # Plot the 10 images with best and worst precision-at-k
     top10 = cbir_df["filename"][cbir_df["precision_at_k"].argsort()[-10:][::-1]]
     bot10 = cbir_df["filename"][cbir_df["precision_at_k"].argsort()[:10]]
 
-    import matplotlib.pyplot as plt
-    from PIL import Image
-    
     def get_cname(fname):
+        # util func for plotting
         lab = labels[np.where(np.array(filenames) == fname)[0][0]]
         return class_names[lab]
-    
+
     def get_fpath(fname):
+        # util func for plotting
         return os.path.join(args.data_path, get_cname(fname), fname)
-    
-    def get_precision_at_k(fname):
-        return cbir_df[cbir_df["filename"] == fname][f"precision_at_k"].values[0]
-    
+
     fig, axes = plt.subplots(10, 10, figsize=(20, 20))
     
     for i in range(10):
         query = top10.iloc[i]
+        prec = cbir_df[cbir_df["filename"] == query][f"precision_at_k"].values[0]
         axes[i, 0].imshow(Image.open(get_fpath(query)).resize((224, 224)))
-        axes[i, 0].set_title(get_cname(query) + " (query)" + f"\n(precision@k={get_precision_at_k(query):.2f})")
+        axes[i, 0].set_title(get_cname(query) + " (query)" + f"\n(precision@k={prec:.2f})")
         axes[i, 0].axis("off")
         
         retrieved_filenames = retrieve_filenames(query, labels, filenames, dists)
@@ -150,8 +166,9 @@ if __name__ == '__main__':
     
     for i in range(10):
         query = bot10.iloc[i]
+        prec = cbir_df[cbir_df["filename"] == query][f"precision_at_k"].values[0]
         axes[i, 0].imshow(Image.open(get_fpath(query)).resize((224, 224)))
-        axes[i, 0].set_title(get_cname(query) + " (query)" + f"\n(precision@k={get_precision_at_k(query):.2f})")
+        axes[i, 0].set_title(get_cname(query) + " (query)" + f"\n(precision@k={prec:.2f})")
         axes[i, 0].axis("off")
         
         retrieved_filenames = retrieve_filenames(query, labels, filenames, dists)
@@ -165,25 +182,7 @@ if __name__ == '__main__':
     plt.savefig(os.path.join(args.destination, "bot10_retrieved_images.pdf"), bbox_inches="tight", dpi=300)
     plt.close()
 
-
-    # compute mean for each class
-    pd.DataFrame({
-        "class": np.unique(labels),
-        "precision_at_k": [cbir_df["precision_at_k"][cbir_df["label"] == k].mean() for k in np.unique(labels)]},
-    ).to_csv(os.path.join(args.destination, "cbir_classwise.csv"))
-    
-    # plot the precision-recall curve
-    x = cbir_mean_df.loc["recall"].values
-    y = cbir_mean_df.loc["precision"].values
-    fname = os.path.join(args.destination, "precision_recall_curve_cbir.pdf")
-    
-    plot_precision_recall_curve(x, y, fname)
-    
-    cbir_df.to_csv(os.path.join(args.destination, "cbir_accuracy.csv"))
-    cbir_mean_df.to_csv(os.path.join(args.destination, "cbir_mean_accuracy.csv"))
-    
-    print("CBIR evaluation done.")
-    
+    # ============ linear evaluation ... ============    
     summary_table = pd.DataFrame()
     summary_tables_knn = {k: pd.DataFrame() for k in args.nb_knn}
     class_wise_nn_stats = []

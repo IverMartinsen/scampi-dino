@@ -89,3 +89,5 @@ def retrieve_filenames(query, labels, filenames, dists):
     # get the filenames of the k nearest neighbors
     retrieved_filenames  = [filenames[j] for j in idx]
     return retrieved_filenames
+
+
