@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_weights', default='', type=str, help="Pretrained weights to evaluate. For ImageNet weights, use 'vit_mae' (ViT-MAE), 'dinov2' (DINOv2) or '' (DINOv1). For custom weights, use the path to the weights.")
     parser.add_argument('--arch', default='vit_small', type=str, help='Architecture. Options: vit_small, vit_base')
     parser.add_argument("--checkpoint_key", default="teacher", type=str, help='Key to use in the checkpoint (example: "teacher")')
-    parser.add_argument('--destination', default='', type=str, help='Destination folder for storing the results.')
+    parser.add_argument('--destination', default='test-results', type=str, help='Destination folder for storing the results.')
     parser.add_argument('--patch_size', default=16, type=int, help='Patch resolution of the model.')
     parser.add_argument('--batch_size', default=128, type=int, help='GPU batch-size.')
     parser.add_argument('--nb_knn', default=[1, 3, 5, 7, 9], nargs='+', type=int, help='Number of NN to use.')
