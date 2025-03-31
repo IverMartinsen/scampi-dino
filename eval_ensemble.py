@@ -20,6 +20,37 @@ from sklearn.metrics import (
     f1_score,
 )
 
+def compute_recall_at_k_from_ensemble(labels, dists, k='k'):
+    prec_at_k = np.zeros(len(labels))
+    rec_at_k = np.zeros(len(labels))
+
+    for i in range(len(labels)):
+        if k == 'k':
+            _k = np.sum(labels == labels[i]) - 1
+        else:
+            _k = k
+        
+        # get the indices of the k nearest neighbors
+        idx0 = np.argsort(dists[0][i])[:_k]
+        idx1 = np.argsort(dists[1][i])[:_k]
+        #idx2 = np.argsort(dists[2][i])[:_k]
+        
+        idx = np.stack([idx0, idx1], axis=1)
+        # find the most common index
+        idx = np.array([np.argmax(np.bincount(i)) for i in idx])
+        
+        # get the labels of the k nearest neighbors
+        nn_labels = labels[idx]
+        # count the number of relevant retrieved samples
+        n_relevant_retrieved = np.sum(nn_labels == labels[i])
+        # count the number of relevant samples
+        n_relevant = np.sum(labels == labels[i]) - 1
+        # compute the precision at k
+        prec_at_k[i] =  n_relevant_retrieved / _k
+        # compute the recall at k
+        rec_at_k[i] = n_relevant_retrieved / n_relevant
+    return prec_at_k, rec_at_k
+
 
 def average_weights(pretrained_weights):
     """

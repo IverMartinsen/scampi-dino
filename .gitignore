@@ -14,3 +14,4 @@ lumi_jobfile.sh
 make_embeddings.yml
 jobfiles-lumi/
 *.pth
+imagefolder-20-classes/
