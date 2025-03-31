@@ -12,4 +12,5 @@ ranked_patches/
 *.pdf
 lumi_jobfile.sh
 make_embeddings.yml
-LUMI jobfiles/
+jobfiles-lumi/
+*.pth
