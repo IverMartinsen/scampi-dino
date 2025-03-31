@@ -12,7 +12,7 @@ from torchvision import transforms as pth_transforms
 
 import utils
 import vision_transformer as vits
-import vit_mae as vits_mae
+
 from timm.models.layers import trunc_normal_
 
 from sklearn.neighbors import KNeighborsClassifier  
