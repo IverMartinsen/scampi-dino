@@ -30,8 +30,9 @@ def load_vit_mae_model():
     
     url="https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_base.pth"
     checkpoint1 = torch.hub.load_state_dict_from_url(url, map_location="cpu")
-    
+    checkpoint1.keys()
     checkpoint = torch.load('/Users/ima029/Downloads/mae_pretrain_vit_base.pth', map_location="cpu")
+    checkpoint.keys()
     checkpoint_model = checkpoint["model"]
     state_dict = model.state_dict()
     
