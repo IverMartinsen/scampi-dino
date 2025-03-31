@@ -43,21 +43,14 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', default='/Users/ima029/Desktop/NO 6407-6-5/data/labelled imagefolders/imagefolder_20', type=str, help='Path to evaluation dataset')
     parser.add_argument('--lora_rank', default=None, type=int, help='Rank of LoRA projection matrix')
     parser.add_argument('--destination', default='', type=str, help='Destination folder for saving results')
-    parser.add_argument('--img_size', default=224, type=int, help='The size of the images used for training the model')
-    parser.add_argument('--img_size_pred', default=224, type=int, help='The size of the images used for prediction')
     args = parser.parse_args()
 
     print("\n".join("%s: %s" % (k, str(v)) for k, v in sorted(dict(vars(args)).items())))
     
-    # ============ preparing data ... ============
-    resize = {96: (110, 110), 224: (256, 256)}
-    
-    imagenet_stats = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
-    micronet_stats = (0.666, 0.576, 0.472), (0.206, 0.234, 0.279)
-    
+    # ============ preparing data ... ============    
     transform = pth_transforms.Compose([
-        pth_transforms.Resize(resize[args.img_size_pred], interpolation=3),
-        pth_transforms.CenterCrop(args.img_size_pred),
+        pth_transforms.Resize((256, 256), interpolation=3),
+        pth_transforms.CenterCrop(224),
         pth_transforms.ToTensor(),
         pth_transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
@@ -67,8 +60,6 @@ if __name__ == '__main__':
     data_loader = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=False)
     
     # ============ building network ... ============
-    print("Building network...")
-    
     if args.pretrained_weights == 'vit_mae':
         model = load_vit_mae_model(args)
     elif args.pretrained_weights == 'dinov2':
