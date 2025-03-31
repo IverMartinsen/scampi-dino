@@ -69,41 +69,6 @@ if __name__ == '__main__':
     
     model.eval()
     print(f"Model {args.arch} {args.patch_size}x{args.patch_size} built.")
-    
-    raise
-    
-    # get model attributes
-    #try:
-    #    checkpoint = torch.load(args.pretrained_weights, map_location="cpu")
-    #
-    #    train_args = {}
-    #    for a in vars(checkpoint["args"]):
-    #        train_args[a] = getattr(checkpoint["args"], a)
-    #    
-    #    summary_json = {}
-    #    summary_json["batch_size"] = train_args["batch_size_per_gpu"] * train_args["world_size"]
-    #    summary_json["learning_rate"] = train_args["lr"]
-    #    summary_json["momentum"] = train_args["momentum_teacher"]
-    #    summary_json["num_epochs"] = train_args["epochs"]
-    #    
-    #    files_used = train_args["data_path"].split("/")[5]
-    #    print(f"Files used: {files_used}")
-    #    if files_used.endswith("test"):
-    #        summary_json["dataset_size"] = 3074560
-    #    elif files_used.endswith("16"):
-    #        summary_json["dataset_size"] = 1537280
-    #    elif files_used.endswith("8"):
-    #        summary_json["dataset_size"] = 768640
-    #    elif files_used.endswith("4"):
-    #        summary_json["dataset_size"] = 384320
-    #    elif files_used.endswith("2"):
-    #        summary_json["dataset_size"] = 192160
-    #    elif files_used.endswith("1"):
-    #        summary_json["dataset_size"] = 96080
-    #    else:
-    #        summary_json["dataset_size"] = 0
-    #except FileNotFoundError:
-    #    print("Checkpoint not found.")
 
     # ============ extract features ... ============
     print("Extracting features...")
@@ -344,15 +309,5 @@ if __name__ == '__main__':
     # take the mean of the class wise statistics
     class_wise_nn_stats_mean = pd.concat(class_wise_nn_stats).groupby(level=0).mean()
     class_wise_nn_stats_mean.to_csv(os.path.join(args.destination, "class_wise_nn_stats.csv"))
-    
-    try:
-        summary_json["log_loss"] = summary_table.loc["mean", "log_loss"]
-        summary_json["cbir_accuracy"] = cbir_mean_df.loc["precision", "k"]
-        summary_json["nn_f1"] = summary_tables_knn[1].mean()["f1_score"]
-        
-        with open(os.path.join(args.destination, "summary_metrics.json"), "w") as f:
-            json.dump(summary_json, f)
-    except NameError:
-        print("Json not saved.")
     
     print("Summary metrics saved.")
