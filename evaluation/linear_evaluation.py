@@ -10,10 +10,6 @@ import torch
 from torchvision import datasets
 from torchvision import transforms as pth_transforms
 
-import utils
-import vision_transformer as vits
-
-from timm.models.layers import trunc_normal_
 
 from sklearn.neighbors import KNeighborsClassifier  
 from sklearn.metrics import (
@@ -31,9 +27,8 @@ from sklearn.metrics import (
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from lora import LoRA_ViT_timm
 from cbir_utils import compute_recall_at_k, plot_precision_recall_curve, retrieve_filenames
-from eval_utils import load_vit_mae_model
+from eval_utils import load_vit_mae_model, load_dinov2_model, load_dino_model
 
 
 if __name__ == '__main__':
@@ -75,25 +70,16 @@ if __name__ == '__main__':
     print("Building network...")
     
     if args.pretrained_weights == 'vit_mae':
-    
-    
+        model = load_vit_mae_model(args)
     elif args.pretrained_weights == 'dinov2':
-        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
-        if args.arch == 'vit_small':
-            model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
-        elif args.arch == 'vit_base':
-            model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14')
-        else:
-            raise ValueError(f"Architecture {args.arch} not supported with DINOv2 weights)")
+        model = load_dinov2_model(args)
     else:
-        model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0, img_size=[args.img_size])
-        print(f"Model {args.arch} {args.patch_size}x{args.patch_size} built.")
-        
-        if args.lora_rank is not None:
-            model = LoRA_ViT_timm(model, r=args.lora_rank)
-        utils.load_pretrained_weights(model, args.pretrained_weights, args.checkpoint_key, args.arch, args.patch_size)
+        model = load_dino_model(args)
     
     model.eval()
+    print(f"Model {args.arch} {args.patch_size}x{args.patch_size} built.")
+    
+    raise
     
     # get model attributes
     #try:
