@@ -13,3 +13,4 @@ ranked_patches/
 lumi_jobfile.sh
 make_embeddings.yml
 LUMI jobfiles/
+*.pth
