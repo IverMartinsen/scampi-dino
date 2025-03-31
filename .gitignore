@@ -15,3 +15,4 @@ make_embeddings.yml
 jobfiles-lumi/
 jobfiles-springfield/
 *.pth
+imagefolder-20-classes/

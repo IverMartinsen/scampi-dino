@@ -1,3 +1,5 @@
+# ViT-MAE vision transformer architecture
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
