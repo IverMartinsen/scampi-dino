@@ -1,0 +1,2 @@
+pytorch<2.6
+torchvision
