@@ -1,15 +1,27 @@
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import torch
-import vit_mae as vits_mae
 import vision_transformer as vits
+import vision_transformer_mae as vits_mae
 import utils
 
-def load_vit_mae_model(args):
+def load_dino_model(args):
+    # Load DINOv1 model
+    model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0)
+    utils.load_pretrained_weights(model, args.pretrained_weights, args.checkpoint_key, args.arch, args.patch_size)
+    return model
 
+def load_dinov2_model(args):
+    # Load DINOv2 model
+    torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+    if args.arch == 'vit_small':
+        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
+    elif args.arch == 'vit_base':
+        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14')
+    else:
+        raise ValueError(f"Architecture {args.arch} not supported with DINOv2 weights)")
+    return model
+
+def load_vit_mae_model(args):
+    # Load ViT-MAE model
     if args.arch != 'vit_base':
         raise ValueError("Unsupported architecture. Only 'vit_base' is supported.")
     
@@ -29,22 +41,6 @@ def load_vit_mae_model(args):
     msg = model.load_state_dict(checkpoint_model, strict=False)
     print(f"Missing keys when loading pretrained weights: {msg.missing_keys}")
     return model
-
-def load_dinov2_model(args):
-    torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
-    if args.arch == 'vit_small':
-        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
-    elif args.arch == 'vit_base':
-        model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14')
-    else:
-        raise ValueError(f"Architecture {args.arch} not supported with DINOv2 weights)")
-    return model
-
-def load_dino_model(args):
-    model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0)
-    utils.load_pretrained_weights(model, args.pretrained_weights, args.checkpoint_key, args.arch, args.patch_size)
-    return model
-
 
 def interpolate_pos_embed(model, checkpoint_model):
     if 'pos_embed' in checkpoint_model:
