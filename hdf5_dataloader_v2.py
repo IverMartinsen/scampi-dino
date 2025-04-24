@@ -1,3 +1,6 @@
+"""
+HDF5 Dataset class for PyTorch used in the SCAMPI project.
+"""
 import os
 import h5py
 import torch
