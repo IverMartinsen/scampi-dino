@@ -1,3 +1,6 @@
+"""
+To produce an ANOVA plot of the features.
+"""
 import os
 import torch
 import utils
