@@ -1,6 +1,6 @@
 # Self-Supervised Learning with Microfossils using DINO
 
-PyTorch implementation and pretrained models for DINO. Mostly copied from [https://github.com/facebookresearch/dino]. This repo covers part A of the fossil frontier pipeline.
+PyTorch implementation and pretrained models for DINO. This repo is an edited clone of the [DINO repo](https://github.com/facebookresearch/dino) and covers part A of the Fossil Frontier pipeline illustrated below.
 
 <div align="center">
   <img width="100%" alt="DINO illustration" src=".github/SCAMPI_schematics.jpg">
