@@ -4,3 +4,4 @@ pandas
 matplotlib
 scikit-learn
 timm
+h5py
