@@ -7,7 +7,7 @@ from main_dino import DataAugmentationDINO
 
 if __name__ == '__main__':
 
-    filepath = '/Users/ima029/Desktop/SCAMPI/Repository/data/NO 6407-6-5/labelled imagefolders/imagefolder_20/areoligera/image249.jpg'
+    filepath = './imagefolder-20-classes/areoligera/image249.jpg'
     image = Image.open(filepath)
     fname = os.path.basename(filepath)
 
