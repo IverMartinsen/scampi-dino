@@ -1,3 +1,10 @@
+"""
+Main evaluation script. Will produce numerous files in the destination folder. Among them:
+- summary_metrics.csv for logistic regression evaluation
+- summary_metrics_knn_1.csv for nearest neighbor classification evaluation
+- cbir_mean_accuracy.csv for precision-at-k CBIR evaluation
+- precision_recall_curve_cbir.jpg for the CBIR precision-recall curve 
+"""
 import os
 import torch
 import argparse
