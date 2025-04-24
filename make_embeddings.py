@@ -1,3 +1,7 @@
+"""
+Extracts features from a dataset using a pretrained Vision Transformer model and saves them to an HDF5 file.
+If wanting a dataset with embeddings instead of images. Used internally for the SCAMPI project.
+"""
 import os
 import argparse
 import h5py

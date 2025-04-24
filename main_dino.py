@@ -34,7 +34,6 @@ import utils
 import vision_transformer as vits
 from vision_transformer import DINOHead
 #from lora import LoRA_ViT_timm
-from zip_dataloader import ZipFilesDataset
 #from hdf5_dataloader import HDF5Dataset, HDF5GroupDataset
 from hdf5_dataloader_v2 import HDF5GroupDataset, HDF5Dataset
 

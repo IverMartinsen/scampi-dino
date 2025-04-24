@@ -1,3 +1,6 @@
+"""
+To easily get the number of trainable parameters.
+"""
 import numpy as np
 from vision_transformer import vit_tiny, vit_small
 
