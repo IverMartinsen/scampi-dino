@@ -14,7 +14,7 @@ from torchvision import datasets
 from torchvision import transforms as pth_transforms
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
-from utils_cbir import compute_recall_at_k, plot_precision_recall_curve, compute_recall_at_k_from_ensemble
+from utils_cbir import compute_recall_at_k, plot_precision_recall_curve
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
