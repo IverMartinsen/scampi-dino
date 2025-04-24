@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--arch', default='vit_small', type=str, help='Architecture')
     parser.add_argument('--patch_size', default=16, type=int, help='Patch resolution of the model.')
     parser.add_argument("--checkpoint_key", default="teacher", type=str, help='Key to use in the checkpoint (example: "teacher")')
-    parser.add_argument('--data_path', default='/Users/ima029/Desktop/NO 6407-6-5/data/labelled imagefolders/imagefolder_20', type=str, help='Path to evaluation dataset')
+    parser.add_argument('--data_path', default='imagefolder-20-classes', type=str, help='Path to evaluation dataset')
     parser.add_argument('--destination', default='', type=str, help='Destination folder for saving results')
     args = parser.parse_args()
     
@@ -35,13 +35,7 @@ if __name__ == '__main__':
     ds = datasets.ImageFolder(args.data_path, transform=transform)
     
     data_loader = torch.utils.data.DataLoader(ds, batch_size=args.batch_size, shuffle=False)
-    
-    args.pretrained_weights = '/Users/ima029/Desktop/dino-v1/dino/trained_models/LUMI/zip scrapings (huge)/dino-v1-8485178/checkpoint.pth'
-    args.pretrained_weights = ''
-    # vit base
-    args.pretrained_weights = '/Users/ima029/Desktop/dino-v1/dino/trained_models/LUMI/zip scrapings (huge)/dino-v1-8590394/checkpoint.pth'
-    args.arch = 'vit_base'
-    
+        
     # ============ building network ... ============
     print("Building network...")
     model = vits.__dict__[args.arch](patch_size=args.patch_size, num_classes=0, img_size=[224])
