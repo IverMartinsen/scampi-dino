@@ -6,7 +6,7 @@ PyTorch implementation and pretrained models for DINO. For details, see **Emergi
 [[`blogpost`](https://ai.facebook.com/blog/dino-paws-computer-vision-with-self-supervised-transformers-and-10x-more-efficient-training)] [[`arXiv`](https://arxiv.org/abs/2104.14294)] [[`Yannic Kilcher's video`](https://www.youtube.com/watch?v=h3ij3F3cPIk)]
 
 <div align="center">
-  <img width="100%" alt="DINO illustration" src=".github/SCAMPI_schematics.pdf">
+  <img width="100%" alt="DINO illustration" src=".github/SCAMPI_schematics.jpg">
 </div>
 
 ## Pretrained models
