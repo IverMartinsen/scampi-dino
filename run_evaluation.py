@@ -24,8 +24,8 @@ from sklearn.metrics import (
     pairwise_distances
 )
 
-from cbir_utils import compute_recall_at_k, plot_precision_recall_curve, retrieve_filenames
-from eval_utils import load_vit_mae_model, load_dinov2_model, load_dino_model
+from utils_cbir import compute_recall_at_k, plot_precision_recall_curve, retrieve_filenames
+from utils_eval import load_vit_mae_model, load_dinov2_model, load_dino_model
 
 if __name__ == '__main__':
 
