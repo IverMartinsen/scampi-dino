@@ -1,3 +1,6 @@
+"""
+Ensemble evaluation presented in the Appendix of the Fossil Frontier paper.
+"""
 import os
 import torch
 import utils
