@@ -34,8 +34,8 @@ You can choose to download only the weights of the pretrained backbone used for 
     <td>0.60</td>
     <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_small_backbone.pth?download=true">backbone only</a></td>
     <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_small_checkpoint.pth?download=true">full ckpt</a></td>
-    <td><a href="">args</a></td>
-    <td><a href="">logs</a></td>
+    <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_small_args.txt?download=true">args</a></td>
+    <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_small_log.txt?download=true">logs</a></td>
   </tr>
   <tr>
     <td>ViT-B/16 ImageNet</td>
