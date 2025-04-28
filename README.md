@@ -32,8 +32,8 @@ You can choose to download only the weights of the pretrained backbone used for 
     <td>21M</td>
     <td>0.91</td>
     <td>0.60</td>
-    <td><a href="">backbone only</a></td>
-    <td><a href="">full ckpt</a></td>
+    <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_small_backbone.pth?download=true">backbone only</a></td>
+    <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_small_checkpoint.pth?download=true">full ckpt</a></td>
     <td><a href="">args</a></td>
     <td><a href="">logs</a></td>
   </tr>
@@ -52,8 +52,8 @@ You can choose to download only the weights of the pretrained backbone used for 
     <td>85M</td>
     <td>0.90</td>
     <td>0.60</td>
-    <td><a href="">backbone only</a></td>
-    <td><a href="">full ckpt</a></td>
+    <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_base_backbone.pth?download=true">backbone only</a></td>
+    <td><a href="https://huggingface.co/IverMartinsen/scampi-dino-vits16/resolve/main/vit_base_checkpoint.pth?download=true">full ckpt</a></td>
     <td><a href="">args</a></td>
     <td><a href="">logs</a></td>
   </tr>
